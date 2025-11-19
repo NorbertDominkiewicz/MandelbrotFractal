@@ -16,9 +16,12 @@ public class SequentialService {
     private final double X_MAX = 1.0;
     private final double Y_MIN = -1.0;
     private final double Y_MAX = 1.0;
+    private final int MAX_ITERATIONS = 1000;
+
     private final LongProperty elapsedTime = new SimpleLongProperty(0);
     private final BooleanProperty isRunning = new SimpleBooleanProperty(false);
     private final ListProperty<IntegerProperty[]> matrix = new SimpleListProperty<>(FXCollections.observableArrayList());
+    private final ObjectProperty<int[][]> colorMatrix = new SimpleObjectProperty<>(); // DODANE
 
     public SequentialService() {}
 
@@ -42,11 +45,14 @@ public class SequentialService {
         matrix.clear();
         fillMatrixWithZeros();
 
+        colorMatrix.set(new int[height][width]);
+
         if (isRunning.get()) return;
         isRunning.set(true);
 
         new Thread(() -> {
             long startTime = System.currentTimeMillis();
+            int[][] localColorMatrix = new int[height][width];
 
             for (int row = 0; row < height; row++) {
                 for (int column = 0; column < width; column++) {
@@ -55,14 +61,27 @@ public class SequentialService {
                     double cy = Y_MIN + (Y_MAX - Y_MIN) * row / (height - 1);
                     Complex c = new Complex(cx, cy);
 
-                    int value = mandelbrot(c);
+                    int iterations = mandelbrot(c);
+                    localColorMatrix[row][column] = iterations;
 
                     int r = row, col = column;
                     Platform.runLater(() ->
-                            matrix.get(r)[col].set(value)
+                            matrix.get(r)[col].set(iterations)
                     );
                 }
+
+                if (row % 10 == 0) {
+                    final int[][] matrixCopy = copyMatrix(localColorMatrix);
+                    Platform.runLater(() -> {
+                        colorMatrix.set(matrixCopy);
+                    });
+                }
             }
+
+            Platform.runLater(() -> {
+                colorMatrix.set(localColorMatrix);
+            });
+
             isRunning.set(false);
             long finishTime = System.currentTimeMillis() - startTime;
             result = new MandelbrotResult(finishTime);
@@ -70,17 +89,28 @@ public class SequentialService {
         }).start();
     }
 
+    private int[][] copyMatrix(int[][] source) {
+        int[][] copy = new int[source.length][];
+        for (int i = 0; i < source.length; i++) {
+            copy[i] = source[i].clone();
+        }
+        return copy;
+    }
 
     private int mandelbrot(Complex c) {
         Complex z = new Complex(0, 0);
 
-        for (int n = 0; n < width * height; n++) {
-            if (z.modulus() > 2) {
+        for (int n = 0; n < MAX_ITERATIONS; n++) {
+            if (z.modulus() > 2.0) {
                 return n;
             }
             z = z.square().add(c);
         }
-        return width * height;
+        return MAX_ITERATIONS;
+    }
+
+    public int getMAX_ITERATIONS() {
+        return MAX_ITERATIONS;
     }
 
     public MandelbrotResult getResult() {
@@ -89,6 +119,10 @@ public class SequentialService {
 
     public ListProperty<IntegerProperty[]> getMatrix() {
         return matrix;
+    }
+
+    public ObjectProperty<int[][]> colorMatrixProperty() {
+        return colorMatrix;
     }
 
     public BooleanProperty getIsRunning() {

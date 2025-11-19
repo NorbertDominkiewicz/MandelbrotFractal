@@ -31,15 +31,16 @@ import java.util.List;
 import java.util.ResourceBundle;
 
 public class MandelbrotController extends ViewController {
-    private final int CANVAS_WIDTH = 400;
-    private final int CANVAS_HEIGHT = 400;
+    private final int CANVAS_WIDTH = 500;
+    private final int CANVAS_HEIGHT = 500;
     protected GraphicsContext graphicsContext;
     protected Canvas canvas;
     protected AnimationTimer animationTimer;
     private Algorithm currentAlgorithm;
     private MainController mainController;
     private final SequentialService sequentialService = new SequentialService();
-    private final List<Point> currentPoints = new ArrayList<>();
+    private int[][] currentColorMatrix;
+
     @FXML private GridPane rootPane;
     @FXML private FlowPane entryPane;
     @FXML private BorderPane canvasPane;
@@ -48,7 +49,7 @@ public class MandelbrotController extends ViewController {
     public void initialize(URL url, ResourceBundle resourceBundle) {
         loadEntryComponent();
         startAnimationLoop();
-        //loadDataBinding();
+        loadDataBinding();
         loadCanvas();
     }
 
@@ -63,17 +64,16 @@ public class MandelbrotController extends ViewController {
     }
 
     private void loadDataBinding() {
-        sequentialService.getMatrix().addListener((observableValue, oldData, newData) -> {
-            if (newData != null && currentAlgorithm.equals(Algorithm.SEQUENTIAL)) {
-                synchronized (currentPoints) {
-                    currentPoints.clear();
-
+        sequentialService.colorMatrixProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && currentAlgorithm == Algorithm.SEQUENTIAL) {
+                synchronized (this) {
+                    currentColorMatrix = newValue;
                 }
             }
         });
 
         sequentialService.getIsRunning().addListener(((observableValue, oldData, newData) -> {
-            if (newData.equals(false) && currentAlgorithm.equals(Algorithm.SEQUENTIAL)) {
+            if (!newData && currentAlgorithm == Algorithm.SEQUENTIAL) {
                 Platform.runLater(() -> {
                     canvasPane.setBottom(createResult(sequentialService.getResult()));
                 });
@@ -85,41 +85,78 @@ public class MandelbrotController extends ViewController {
         canvas = new Canvas(CANVAS_WIDTH, CANVAS_HEIGHT);
         graphicsContext = canvas.getGraphicsContext2D();
         canvasPane.setCenter(canvas);
+        drawTemplate();
     }
 
     private void renderCanvas() {
-        synchronized (currentPoints) {
-            if (!currentPoints.isEmpty()) {
-                for (Point point : currentPoints) {
-                    double x = (point.getX() + 1) * (CANVAS_WIDTH / 2.0);
-                    double y = (point.getY() + 1) * (CANVAS_HEIGHT / 2.0);
-
-                    boolean inCircle = (point.getX() * point.getX() + point.getY() * point.getY()) <= 1;
-                    graphicsContext.setFill(inCircle ? Color.YELLOW : Color.BLACK);
-                    graphicsContext.fillOval(x - 1.5, y - 1.5, 3, 3);
-                }
+        synchronized (this) {
+            if (currentColorMatrix != null) {
+                drawMandelbrot();
             }
         }
+    }
+
+    private void drawMandelbrot() {
+        int width = sequentialService.getWidth();
+        int height = sequentialService.getHeight();
+
+        if (width <= 0 || height <= 0) return;
+
+        double pixelWidth = (double) CANVAS_WIDTH / width;
+        double pixelHeight = (double) CANVAS_HEIGHT / height;
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int iterations = currentColorMatrix[y][x];
+                Color color = getColorForIterations(iterations, sequentialService.getMAX_ITERATIONS());
+
+                graphicsContext.setFill(color);
+                graphicsContext.fillRect(x * pixelWidth, y * pixelHeight, pixelWidth, pixelHeight);
+            }
+        }
+    }
+
+    private Color getColorForIterations(int iterations, int maxIterations) {
+        if (iterations == maxIterations) {
+            return Color.BLACK;
+        }
+
+        double ratio = (double) iterations / maxIterations;
+        return Color.hsb(240 * ratio, 0.8, 1.0);
+
+        // Schemat 2: Tęcza
+        // return Color.hsb(360.0 * iterations / maxIterations, 0.8, 1.0);
+
+        // Schemat 3: Ciepłe kolory
+        // return Color.hsb(30 + 300.0 * iterations / maxIterations, 0.8, 1.0);
     }
 
     public void run(int width, int height, Algorithm algorithm) {
         this.currentAlgorithm = algorithm;
         graphicsContext.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        drawTemplate();
+
         switch (currentAlgorithm) {
             case SEQUENTIAL -> {
                 sequentialService.run(width, height);
-                canvasPane.setBottom(createResult(sequentialService.getResult()));
             }
-            case PARALLEL -> {}
+            case PARALLEL -> {
+
+            }
         }
     }
 
     private void drawTemplate() {
-        graphicsContext.setStroke(Color.ROSYBROWN);
-        graphicsContext.setLineWidth(2);
+        graphicsContext.setStroke(Color.LIGHTGRAY);
+        graphicsContext.setLineWidth(1);
         graphicsContext.strokeRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        graphicsContext.strokeOval(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        graphicsContext.setStroke(Color.rgb(200, 200, 200, 0.3));
+        for (int i = 1; i < 4; i++) {
+            double x = i * CANVAS_WIDTH / 4.0;
+            double y = i * CANVAS_HEIGHT / 4.0;
+            graphicsContext.strokeLine(x, 0, x, CANVAS_HEIGHT);
+            graphicsContext.strokeLine(0, y, CANVAS_WIDTH, y);
+        }
     }
 
     private void loadEntryComponent() {
@@ -136,22 +173,27 @@ public class MandelbrotController extends ViewController {
     }
 
     private Node createResult(MandelbrotResult result) {
-        HBox resultBox = new HBox();
+        HBox resultBox = new HBox(20);
         resultBox.getStyleClass().add("result-container");
 
-        Label labelTimeInSeconds = new Label("Time in seconds:: ");
-        Label timeInSecondsLabel = new Label(String.valueOf(result.elapsedTime() / 1000.0));
+        Label labelTimeInSeconds = new Label("Time in seconds: ");
+        Label timeInSecondsLabel = new Label(String.format("%.3f s", result.elapsedTime() / 1000.0));
         Label labelTimeInMillis = new Label("Time in millis: ");
-        Label timeInMillisLabel = new Label(result.elapsedTime()+ " ms");
+        Label timeInMillisLabel = new Label(result.elapsedTime() + " ms");
+        Label labelResolution = new Label("Resolution: ");
+        Label resolutionLabel = new Label(sequentialService.getWidth() + "x" + sequentialService.getHeight());
 
         labelTimeInMillis.getStyleClass().add("result-label");
         labelTimeInSeconds.getStyleClass().add("result-label");
+        labelResolution.getStyleClass().add("result-label");
         timeInMillisLabel.getStyleClass().add("result-value");
         timeInSecondsLabel.getStyleClass().add("result-value");
+        resolutionLabel.getStyleClass().add("result-value");
 
         resultBox.getChildren().addAll(
-                new HBox(labelTimeInSeconds, timeInSecondsLabel),
-                new HBox(labelTimeInMillis, timeInMillisLabel)
+                new HBox(10, labelTimeInSeconds, timeInSecondsLabel),
+                new HBox(10, labelTimeInMillis, timeInMillisLabel),
+                new HBox(10, labelResolution, resolutionLabel)
         );
         return resultBox;
     }
