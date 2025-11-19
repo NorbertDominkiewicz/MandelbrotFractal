@@ -1,0 +1,131 @@
+.root {
+    -fx-background-color: #01060a;
+    -fx-background-radius: 12px;
+}
+
+/* UPPER PANEL */
+
+.upperPane {
+    -fx-background-color: transparent
+}
+
+.titleLabel {
+    -fx-text-fill: #fafafa;
+    -fx-text-alignment: center;
+    -fx-font-size: 17px;
+    -fx-font-family: Consolas;
+    -fx-font-weight: 800;
+}
+
+.upperButton {
+    -fx-pref-width: 30px;
+    -fx-pref-height: 30px;
+    -fx-background-radius: 50px;
+    -fx-cursor: hand;
+}
+
+.upperButton.cloudButton {
+    -fx-background-color: #fafafa;
+}
+
+.closeButton {
+    -fx-pref-width: 25px;
+    -fx-pref-height: 25px;
+    -fx-background-radius: 50px;
+    -fx-cursor: hand;
+    -fx-background-color: #f13333;
+}
+
+/* ASIDE PANE */
+
+.asidePane {
+    -fx-background-color: #491010;
+    -fx-background-radius: 15px 0px 0px 15px;
+    /*-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 2), 10, 0, 0, 2);*/
+    -fx-pref-width: 42px;
+    -fx-min-width: 42px;
+    -fx-max-width: 42px;
+    -fx-transition: all 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+    -fx-padding: 25px 10px;
+    -fx-vgap: 10px;
+    -fx-font-family: Consolas;
+    -fx-font-size: 12px;
+    -fx-border-color: black;
+    -fx-border-width: 0px 1px 0px 0px;
+}
+
+.asidePane:hover {
+    -fx-pref-width: 130px;
+    -fx-min-width: 130px;
+    -fx-max-width: 130px;
+    -fx-effect: dropshadow(gaussian, rgba(58, 58, 59, 0.8), 20, 0.5, 0, 8);
+}
+
+.asideButton {
+    -fx-background-color: transparent;
+    -fx-pref-width: 110px;
+    -fx-text-fill: white;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 10px;
+    -fx-padding: 10px 5px;
+    -fx-alignment: center-left;
+    -fx-cursor: hand;
+    -fx-transition: all 0.3s ease;
+    -fx-content-display: left;
+    -fx-graphic-text-gap: 10px;
+}
+
+.asideButton:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 1.03;
+    -fx-scale-y: 1.03;
+}
+
+.asideButton .text {
+    -fx-opacity: 0;
+    -fx-font-family: Consolas;
+    -fx-transition: opacity 0.6s ease 0.4s;
+}
+
+.asidePane:hover .asideButton .text {
+    -fx-opacity: 1;
+}
+
+.asideIcon {
+    -fx-fill: white;
+    -fx-transition: all 0.3s ease;
+    -fx-font-size: 15px;
+    -fx-icon-size: 15px;
+}
+
+.asideButton:hover .asideIcon {
+    -fx-fill: #e0b41e;
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+}
+
+.asideButton.active,
+.asideButton.active .asideIcon {
+    -fx-fill: #e0b41e;
+    -fx-text-fill: #e0b41e;
+}
+
+/* CONTENT PANE */
+
+.contentHeaderPane {
+    -fx-background-color: #9f1717;
+    -fx-background-radius: 0px 20px 0px 0px;
+    -fx-min-width: 145px;
+    -fx-pref-width: 145px;
+    -fx-max-width: 145px;
+    -fx-pref-height: 25px;
+    -fx-border-width: 0px;
+}
+
+.contentHeaderLabel {
+    -fx-text-fill: #f3f3f3;
+    -fx-text-alignment: center;
+    -fx-font-size: 15px;
+    -fx-font-family: Consolas;
+    -fx-font-weight: 700;
+}
